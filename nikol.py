@@ -1,25 +1,37 @@
+import telebot
 import os
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from flask import Flask, request
 
-# קבלת הטוקן מהסביבה
-TOKEN = os.getenv("BOT_TOKEN")
+# הגדרות בסיסיות
+BOT_TOKEN = '7668567141:AAHvAdau0XysVELfdS3XMuKUS_354CHWuZ4'
+bot = telebot.TeleBot(BOT_TOKEN)
 
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("היי! אני בוט טלגרם.")
+# יצירת אפליקציית Flask
+app = Flask(__name__)
 
-def echo(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(update.message.text)
+# טיפול בפקודת /start
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "שלום! אני בוט חדש. איך אני יכול לעזור?")
 
-def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+# טיפול בהודעות טקסט
+@bot.message_handler(func=lambda message: True)
+def echo_message(message):
+    bot.reply_to(message, f"קיבלתי את ההודעה שלך: {message.text}")
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+# הגדרת ה-webhook
+@app.route(f'/{BOT_TOKEN}', methods=['POST'])
+def webhook():
+    json_string = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return 'OK'
 
-    updater.start_polling()
-    updater.idle()
+# דף הבית פשוט
+@app.route('/')
+def home():
+    return 'הבוט פעיל!'
 
-if __name__ == "__main__":
-    main()
+# הפעלת השרת
+if __name__ == '__main__':
+    app.run()
